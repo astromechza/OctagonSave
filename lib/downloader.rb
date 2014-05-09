@@ -16,8 +16,5 @@ class Downloader
             raise "#{playlist_url.inspect} is an invalid playlist_url"
         end
         @playlist_url = playlist_url
-
-
-
     end
 end
