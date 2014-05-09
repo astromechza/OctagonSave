@@ -1,4 +1,5 @@
 require 'net/http'
+require 'json'
 
 class Downloader
 
@@ -19,6 +20,8 @@ class Downloader
             puts "Created output directory (#{@output_dir})"
         end
 
+        token = get_play_token()
+        playlist_id = get_playlist_id(@playlist_url)
 
 
     end
@@ -37,5 +40,15 @@ class Downloader
             end
 
             return playlist_url, File.expand_path(path)
+        end
+
+        def get_play_token
+            jsn = JSON.load(Net::HTTP.get('8tracks.com', "/sets/new.json?api_key=#{@api_key}"))
+            return jsn['play_token']
+        end
+
+        def get_playlist_id(url)
+            content = Net::HTTP.get(URI(url))
+            return content[/mixes\/(\d+)\/player/, 1]
         end
 end
