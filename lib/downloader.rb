@@ -13,6 +13,14 @@ class Downloader
 
     def save_all(playlist_url, path)
         @playlist_url, @output_dir = sanitize_save_params(playlist_url, path)
+
+        unless Dir.exists? @output_dir
+            Dir.mkdir @output_dir
+            puts "Created output directory (#{@output_dir})"
+        end
+
+
+
     end
 
     private
@@ -31,4 +39,3 @@ class Downloader
             return playlist_url, File.expand_path(path)
         end
 end
-
