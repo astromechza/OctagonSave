@@ -10,18 +10,26 @@ class Downloader
         end
 
         @api_key = api_key
+        @token = get_play_token()
     end
 
     def save_all(playlist_url, path)
-        @playlist_url, @output_dir = sanitize_save_params(playlist_url, path)
+        playlist_url, output_dir = sanitize_save_params( playlist_url, path )
 
-        unless Dir.exists? @output_dir
-            Dir.mkdir @output_dir
+        unless Dir.exists? output_dir
+            Dir.mkdir output_dir
             puts "Created output directory (#{@output_dir})"
         end
 
-        token = get_play_token()
-        playlist_id = get_playlist_id(@playlist_url)
+        playlist_id = get_playlist_id( playlist_url )
+
+        if playlist_id.nil?
+            raise "Invalid 8tracks url"
+        end
+
+        loader = get_playlist_loader( playlist_id )
+        info = get_playlist_info( playlist_id )
+
 
 
     end
@@ -50,5 +58,15 @@ class Downloader
         def get_playlist_id(url)
             content = Net::HTTP.get(URI(url))
             return content[/mixes\/(\d+)\/player/, 1]
+        end
+
+        def get_playlist_loader(playlist_id)
+            playurl = URI("http://8tracks.com/sets/#{@token}/play?mix_id=#{playlist_id}&format=jsonh&api_key=#{@api_key}")
+            return JSON.load(Net::HTTP.get(playurl))
+        end
+
+        def get_playlist_info(playlist_id)
+            playlist = URI("http://8tracks.com/mixes/#{playlist_id}.json&api_key=#{@api_key}")
+            return JSON.load(Net::HTTP.get(playlist))
         end
 end
