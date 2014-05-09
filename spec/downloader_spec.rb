@@ -17,3 +17,12 @@ describe Downloader, '#initialize' do
         Downloader.new('0123456789abcdefg0123456789abcdefg123456')
     end
 end
+
+describe Downloader, '#sanitize_save_params' do
+    it 'should return correct values when valid' do
+        d = Downloader.new('0123456789abcdefg0123456789abcdefg123456')
+        a, b = d.send(:sanitize_save_params, 'http://8tracks.com/testuser/testplaylist', '.')
+        a.should eq('http://8tracks.com/testuser/testplaylist')
+        b.should eq(File.expand_path('.'))
+    end
+end
