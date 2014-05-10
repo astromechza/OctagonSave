@@ -18,7 +18,7 @@ class Downloader
 
         unless Dir.exists? output_dir
             Dir.mkdir output_dir
-            puts "Created output directory (#{@output_dir})"
+            puts "Created output directory (#{output_dir})"
         end
 
         playlist_id = get_playlist_id( playlist_url )
@@ -30,7 +30,25 @@ class Downloader
         loader = get_playlist_loader( playlist_id )
         info = get_playlist_info( playlist_id )
 
+        at_end = false
+        song_number = 1
+        m3u = []
+        while not at_end
+            curr_song_url = loader['set']['track']['track_file_stream_url']
+            curr_artist = loader['set']['track']['performer']
+            curr_song_title = loader['set']['track']['name']
+            curr_year = loader['set']['track']['year'].to_i
+            curr_album = loader['set']['track']['release_name']
 
+            uri = URI(curr_song_url)
+            resp = Net::HTTP.get_response(uri)
+
+            if resp.code == '302'
+                puts resp.uri
+            end
+
+            return false
+        end
 
     end
 
