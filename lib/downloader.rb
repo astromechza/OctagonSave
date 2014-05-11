@@ -2,6 +2,7 @@ require 'net/http'
 require 'json'
 require 'tempfile'
 require 'openssl'
+require 'mp3info'
 
 class Downloader
 
