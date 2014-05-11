@@ -32,14 +32,16 @@ class Downloader
         loader = get_playlist_loader( playlist_id )
         info = get_playlist_info( playlist_id )
 
+        album_name = sanitize_filename(info['mix']['name'])
+
+        output_dir = File.join(output_dir, album_name)
+
         song_number = 1
         while true
-            curr_song_url = loader['set']['track']['track_file_stream_url']
+            curr_song_url = loader['set']['track']['url']
             curr_artist = loader['set']['track']['performer']
             curr_song_title = loader['set']['track']['name']
-            curr_album = loader['set']['track']['release_name']
             curr_track_id = loader['set']['track']['id']
-
 
             puts "get real url for #{curr_song_url}"
             uri = URI(curr_song_url)
@@ -56,7 +58,7 @@ class Downloader
 
                 file_name = sanitize_filename(file_name)
 
-                file_path = File.join('.', file_name)
+                file_path = File.join(output_dir, file_name)
 
                 puts "built file path #{file_path}"
 
@@ -145,8 +147,12 @@ class Downloader
         end
 
         def get_playlist_loader(playlist_id)
-            playurl = URI("http://8tracks.com/sets/#{@token}/play?mix_id=#{playlist_id}&format=jsonh&api_key=#{@api_key}")
-            return JSON.load(Net::HTTP.get(playurl))
+            playurl = URI("http://8tracks.com/sets/#{@token}/play.json?mix_id=#{playlist_id}&api_key=#{@api_key}")
+            res = Net::HTTP.get_response(playurl)
+
+            puts res.body.inspect
+
+            return JSON.load(res.body)
         end
 
         def get_playlist_info(playlist_id)
@@ -159,16 +165,17 @@ class Downloader
         end
 
         def iterate_loader(playlist_id)
-            playurl = URI("http://8tracks.com/sets/#{@token}/next?mix_id=#{playlist_id}&format=jsonh&api_key=#{@api_key}")
+            playurl = URI("http://8tracks.com/sets/#{@token}/next.json?mix_id=#{playlist_id}&api_key=#{@api_key}")
 
             res = Net::HTTP.get_response(playurl)
 
-            if res.code == '403'
+            while res.code == '403'
                 puts "8tracks wants us to not skip :("
                 sleep(30)
                 res = Net::HTTP.get_response(playurl)
             end
 
+            puts res.body
 
             return JSON.load(res.body)
         end
