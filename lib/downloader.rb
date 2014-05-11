@@ -29,6 +29,7 @@ class Downloader
         info = get_playlist_info( playlist_id )
 
         album_name = sanitize_filename(info['mix']['name'])
+        album_genre = info['mix']['genres'][0..3].join(';')
 
         output_dir = File.join(output_dir, album_name)
 
@@ -40,9 +41,10 @@ class Downloader
         song_number = 1
         while true
             curr_song_url = loader['set']['track']['url']
-            curr_artist = loader['set']['track']['performer']
+            curr_song_artist = loader['set']['track']['performer']
             curr_song_title = loader['set']['track']['name']
             curr_track_id = loader['set']['track']['id']
+            puts loader['set'].inspect
 
             puts "get real url for #{curr_song_url}"
             uri = URI(curr_song_url)
@@ -55,7 +57,7 @@ class Downloader
 
                 filetype = parsed_url.path[-3..-1]
 
-                file_name = "#{song_number} - #{curr_artist} - #{curr_song_title}.#{filetype}"
+                file_name = "#{song_number} - #{curr_song_artist} - #{curr_song_title}.#{filetype}"
 
                 file_name = sanitize_filename(file_name)
 
@@ -74,7 +76,7 @@ class Downloader
 
                 http.request_get(parsed_url.path + '?' + parsed_url.query) do |response|
                     if response.is_a? Net::HTTPOK
-                        temp_file = Tempfile.new("#{file_name}.part")
+                        temp_file = Tempfile.new(file_name)
                         temp_file.binmode
 
                         size = 0
@@ -92,8 +94,20 @@ class Downloader
                         end
 
                         temp_file.close
-                        puts "ensure directories"
-                        FileUtils.mkdir_p File.dirname(file_path)
+
+                        puts "adding ID3 tags"
+                        begin
+                            Mp3Info.open(temp_file.path) do |mp3|
+                                mp3.tag.title = curr_song_title
+                                mp3.tag.artist = curr_song_artist
+                                mp3.tag.album = info['mix']['name']
+                                mp3.tag.tracknum = song_number
+                                mp3.tag.genre_s = album_genre
+                            end
+                        rescue Exception => e
+                            puts e
+                        end
+
                         puts "move file to target"
                         FileUtils.mv temp_file.path, file_path, :force => true
                         puts "complete"
@@ -167,7 +181,7 @@ class Downloader
             res = Net::HTTP.get_response(playurl)
 
             while res.code == '403'
-                puts "8tracks wants us to not skip :("
+                puts "8tracks throttling! D:"
                 sleep(30)
                 res = Net::HTTP.get_response(playurl)
             end
