@@ -1,5 +1,6 @@
 require 'net/http'
 require 'json'
+require 'tempfile'
 
 class Downloader
 
@@ -37,15 +38,64 @@ class Downloader
             curr_song_url = loader['set']['track']['track_file_stream_url']
             curr_artist = loader['set']['track']['performer']
             curr_song_title = loader['set']['track']['name']
-            curr_year = loader['set']['track']['year'].to_i
             curr_album = loader['set']['track']['release_name']
 
             uri = URI(curr_song_url)
             resp = Net::HTTP.get_response(uri)
 
-            if resp.code == '302'
-                puts resp.uri
+            actual_url = resp['location']
+            parsed_url = URI(actual_url)
+
+            filetype = parsed_url.path[-3..-1]
+
+            file_name = "#{song_number} - #{curr_artist} - #{curr_song_title}.#{filetype}"
+
+            file_name = sanitize_filename(file_name)
+
+            file_path = File.join('.', file_name)
+
+            unless File.exists? (file_path)
+
+                http = Net::HTTP.new(parsed_url.host, parsed_url.port)
+                if parsed_url.scheme.downcase == 'https'
+                    http.use_ssl = true
+                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+                end
+
+                http.request_get(parsed_url.path + '?' + parsed_url.query) do |response|
+                    if response.is_a? Net::HTTPOK
+                        temp_file = Tempfile.new("#{file_name}.part")
+                        temp_file.binmode
+
+                        size = 0
+                        progress = 0
+                        total = response.header["Content-Length"].to_i
+
+                        response.read_body do |chunk|
+                            temp_file << chunk
+                            size += chunk.size
+                            new_progress = (size * 100) / total
+                            unless new_progress == progress
+                                puts "\rDownloading %s (%3d%%) " % [file_name, new_progress]
+                            end
+                            progress = new_progress
+                        end
+
+                        temp_file.close
+                        FileUtils.mkdir_p File.dirname(file_path)
+                        FileUtils.mv temp_file.path, file_path, :force => true
+
+                    else
+                        puts response
+                    end
+                end
+
+            else
+                puts "Song #{file_path.inspect} already exists. Skipping."
             end
+
+            puts file_name
+
 
             return false
         end
@@ -86,5 +136,9 @@ class Downloader
         def get_playlist_info(playlist_id)
             playlist = URI("http://8tracks.com/mixes/#{playlist_id}.json?api_key=#{@api_key}")
             return JSON.load(Net::HTTP.get(playlist))
+        end
+
+        def sanitize_filename(fn)
+            return fn.gsub(/[^a-z0-9\-_\.\(\) ]+/i, '_')
         end
 end
