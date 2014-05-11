@@ -39,57 +39,69 @@ class Downloader
             curr_song_title = loader['set']['track']['name']
             curr_album = loader['set']['track']['release_name']
 
+
+            puts "get real url for #{curr_song_url}"
             uri = URI(curr_song_url)
             resp = Net::HTTP.get_response(uri)
-            actual_url = resp['location']
-            parsed_url = URI(actual_url)
 
-            filetype = parsed_url.path[-3..-1]
+            if [200, 302].include? resp.code.to_i
+                actual_url = resp['location']
+                puts "got #{resp.code} #{actual_url}"
 
-            file_name = "#{song_number} - #{curr_artist} - #{curr_song_title}.mp3"
+                parsed_url = URI(actual_url)
 
-            file_name = sanitize_filename(file_name)
+                filetype = parsed_url.path[-3..-1]
 
-            file_path = File.join('.', file_name)
+                file_name = "#{song_number} - #{curr_artist} - #{curr_song_title}.mp3"
 
-            unless File.exists? (file_path)
+                file_name = sanitize_filename(file_name)
 
-                http = Net::HTTP.new(parsed_url.host, parsed_url.port)
-                if parsed_url.scheme.downcase == 'https'
-                    http.use_ssl = true
-                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-                end
+                file_path = File.join('.', file_name)
 
-                http.request_get(parsed_url.path + '?' + parsed_url.query) do |response|
-                    if response.is_a? Net::HTTPOK
-                        temp_file = Tempfile.new("#{file_name}.part")
-                        temp_file.binmode
+                puts "built file path #{file_path}"
 
-                        size = 0
-                        progress = 0
-                        total = response.header["Content-Length"].to_i
+                unless File.exists? (file_path)
 
-                        response.read_body do |chunk|
-                            temp_file << chunk
-                            size += chunk.size
-                            new_progress = (size * 100) / total
-                            unless new_progress == progress
-                                puts "\rDownloading %s (%3d%%) " % [file_name, new_progress]
-                            end
-                            progress = new_progress
-                        end
-
-                        temp_file.close
-                        FileUtils.mkdir_p File.dirname(file_path)
-                        FileUtils.mv temp_file.path, file_path, :force => true
-
-                    else
-                        puts response
+                    http = Net::HTTP.new(parsed_url.host, parsed_url.port)
+                    if parsed_url.scheme.downcase == 'https'
+                        http.use_ssl = true
+                        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
                     end
-                end
 
-            else
-                puts "Song #{file_path.inspect} already exists. Skipping."
+                    http.request_get(parsed_url.path + '?' + parsed_url.query) do |response|
+                        if response.is_a? Net::HTTPOK
+                            temp_file = Tempfile.new("#{file_name}.part")
+                            temp_file.binmode
+
+                            size = 0
+                            progress = 0
+                            total = response.header["Content-Length"].to_i
+
+                            response.read_body do |chunk|
+                                temp_file << chunk
+                                size += chunk.size
+                                new_progress = (size * 100) / total
+                                unless new_progress == progress
+                                    puts "\rDownloading %s (%3d%%) " % [file_name, new_progress]
+                                end
+                                progress = new_progress
+                            end
+
+                            temp_file.close
+                            puts "ensure directories"
+                            FileUtils.mkdir_p File.dirname(file_path)
+                            puts "move file to target"
+                            FileUtils.mv temp_file.path, file_path, :force => true
+                            puts "complete"
+
+                        else
+                            puts response
+                        end
+                    end
+
+                else
+                    puts "Song #{file_path.inspect} already exists. Skipping."
+                end
             end
 
             song_number += 1
