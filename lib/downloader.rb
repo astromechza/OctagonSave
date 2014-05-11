@@ -38,12 +38,12 @@ class Downloader
             curr_artist = loader['set']['track']['performer']
             curr_song_title = loader['set']['track']['name']
             curr_album = loader['set']['track']['release_name']
+            curr_track_id = loader['set']['track']['id']
 
 
             puts "get real url for #{curr_song_url}"
             uri = URI(curr_song_url)
             resp = Net::HTTP.get_response(uri)
-
             if [200, 302].include? resp.code.to_i
                 actual_url = resp['location']
                 puts "got #{resp.code} #{actual_url}"
@@ -52,7 +52,7 @@ class Downloader
 
                 filetype = parsed_url.path[-3..-1]
 
-                file_name = "#{song_number} - #{curr_artist} - #{curr_song_title}.mp3"
+                file_name = "#{song_number} - #{curr_artist} - #{curr_song_title}.#{filetype}"
 
                 file_name = sanitize_filename(file_name)
 
@@ -60,54 +60,59 @@ class Downloader
 
                 puts "built file path #{file_path}"
 
-                unless File.exists? (file_path)
 
-                    http = Net::HTTP.new(parsed_url.host, parsed_url.port)
-                    if parsed_url.scheme.downcase == 'https'
-                        http.use_ssl = true
-                        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-                    end
-
-                    http.request_get(parsed_url.path + '?' + parsed_url.query) do |response|
-                        if response.is_a? Net::HTTPOK
-                            temp_file = Tempfile.new("#{file_name}.part")
-                            temp_file.binmode
-
-                            size = 0
-                            progress = 0
-                            total = response.header["Content-Length"].to_i
-
-                            response.read_body do |chunk|
-                                temp_file << chunk
-                                size += chunk.size
-                                new_progress = (size * 100) / total
-                                unless new_progress == progress
-                                    puts "\rDownloading %s (%3d%%) " % [file_name, new_progress]
-                                end
-                                progress = new_progress
-                            end
-
-                            temp_file.close
-                            puts "ensure directories"
-                            FileUtils.mkdir_p File.dirname(file_path)
-                            puts "move file to target"
-                            FileUtils.mv temp_file.path, file_path, :force => true
-                            puts "complete"
-
-                        else
-                            puts response
-                        end
-                    end
-
-                else
-                    puts "Song #{file_path.inspect} already exists. Skipping."
+                http = Net::HTTP.new(parsed_url.host, parsed_url.port)
+                if parsed_url.scheme.downcase == 'https'
+                    http.use_ssl = true
+                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
                 end
+
+                start_time = Time.now.to_i
+
+                http.request_get(parsed_url.path + '?' + parsed_url.query) do |response|
+                    if response.is_a? Net::HTTPOK
+                        temp_file = Tempfile.new("#{file_name}.part")
+                        temp_file.binmode
+
+                        size = 0
+                        progress = 0
+                        total = response.header["Content-Length"].to_i
+
+                        response.read_body do |chunk|
+                            temp_file << chunk
+                            size += chunk.size
+                            new_progress = (size * 100) / total
+                            unless new_progress == progress
+                                puts "\rDownloading %s (%3d%%) " % [file_name, new_progress]
+                            end
+                            progress = new_progress
+                        end
+
+                        temp_file.close
+                        puts "ensure directories"
+                        FileUtils.mkdir_p File.dirname(file_path)
+                        puts "move file to target"
+                        FileUtils.mv temp_file.path, file_path, :force => true
+                        puts "complete"
+
+                    else
+                        puts response
+                    end
+                end
+
+                delay = Time.now.to_i - (start_time + 30)
+                sleep(-delay) if delay < 0
+
+                report_performance(playlist_id, curr_track_id)
+
+
+
+
             end
 
             song_number += 1
 
             loader = iterate_loader( playlist_id )
-
             return if loader['set']['at_end']
         end
 
@@ -149,9 +154,23 @@ class Downloader
             return JSON.load(Net::HTTP.get(playlist))
         end
 
+        def report_performance(playlist_id, track_id)
+            return Net::HTTP.get(URI("http://8tracks.com/sets/#{@token}/report.json?track_id=#{track_id}&mix_id=#{playlist_id}"))
+        end
+
         def iterate_loader(playlist_id)
             playurl = URI("http://8tracks.com/sets/#{@token}/next?mix_id=#{playlist_id}&format=jsonh&api_key=#{@api_key}")
-            return JSON.load(Net::HTTP.get(playurl))
+
+            res = Net::HTTP.get_response(playurl)
+
+            if res.code == '403'
+                puts "8tracks wants us to not skip :("
+                sleep(30)
+                res = Net::HTTP.get_response(playurl)
+            end
+
+
+            return JSON.load(res.body)
         end
 
         def sanitize_filename(fn)
