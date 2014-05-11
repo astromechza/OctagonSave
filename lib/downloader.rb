@@ -18,11 +18,6 @@ class Downloader
     def save_all(playlist_url, path)
         playlist_url, output_dir = sanitize_save_params( playlist_url, path )
 
-        unless Dir.exists? output_dir
-            Dir.mkdir output_dir
-            puts "Created output directory (#{output_dir})"
-        end
-
         playlist_id = get_playlist_id( playlist_url )
 
         if playlist_id.nil?
@@ -35,6 +30,11 @@ class Downloader
         album_name = sanitize_filename(info['mix']['name'])
 
         output_dir = File.join(output_dir, album_name)
+
+        unless Dir.exists? output_dir
+            Dir.mkdir output_dir
+            puts "Created output directory (#{output_dir})"
+        end
 
         song_number = 1
         while true
