@@ -84,7 +84,7 @@ class Downloader
         end
 
         def get_playlist_info(playlist_id)
-            playlist = URI("http://8tracks.com/mixes/#{playlist_id}.json&api_key=#{@api_key}")
+            playlist = URI("http://8tracks.com/mixes/#{playlist_id}.json?api_key=#{@api_key}")
             return JSON.load(Net::HTTP.get(playlist))
         end
 end
