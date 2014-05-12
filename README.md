@@ -1,5 +1,5 @@
 # Octagon
-A Ruby gem for downloading playlists from 8tracks. Octagon aims to use the 8tracks api to correctly download tracks in a mostly legal manner ;)
+A Ruby gem for downloading playlists from 8tracks. Octagon aims to use the 8tracks api to correctly download tracks in a mostly (but not very) legal manner ;)
 
 Build for Ruby 2.1.0
 
@@ -9,7 +9,7 @@ Unfortunately I'm not putting this on rubygems.org. So for now you need to clone
     $ git clone git://github.com/AstromechZA/OctagonSave.git
     $ cd OctagonSave
     $ gem build octagon.gemspec
-    $ gem install octagon-x.x.x.gem              # where x.x.x is ther version number
+    $ gem install octagon-x.x.x.gem              # where x.x.x is the version number
 
 ## Usage
 
