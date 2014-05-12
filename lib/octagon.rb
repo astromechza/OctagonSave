@@ -46,7 +46,7 @@ class OctagonDownloader
         output_dir = File.join(output_dir, album_name)
         unless Dir.exists? output_dir
             @log.info "Building output directory #{output_dir}"
-            Dir.mkdir output_dir
+            FileUtils.mkdir_p File.dirname output_dir
         end
 
         song_number = 1
