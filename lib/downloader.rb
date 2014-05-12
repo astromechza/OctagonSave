@@ -195,17 +195,21 @@ class Downloader
 
         def iterate_loader(playlist_id)
             resource = "sets/#{@token}/next.json?mix_id=#{playlist_id}&api_key=#{@api_key}"
-            r = @eightTracks[resource].get
-
-            while r.code == '403'
-                puts "8tracks throttling! D:"
-                sleep(30)
-                r = @eightTracks[resource].get
+            r = nil
+            while true
+                begin
+                    r = @eightTracks[resource].get
+                    puts r.to_str
+                    return JSON.load(r.to_str)
+                rescue => e
+                    if e.response.code == 403
+                        puts "8tracks throttling! D:"
+                        sleep(30)
+                    else
+                        return nil
+                    end
+                end
             end
-
-            puts r.to_str
-
-            return JSON.load(r.to_str)
         end
 
         def sanitize_filename(fn)
