@@ -11,7 +11,9 @@ class OctagonDownloader
 
     def initialize(api_key)
         @log = Log4r::Logger.new('octagon')
+        @log.level = INFO
         @log.outputters = Outputter.stdout
+        @log.outputters.first.formatter = PatternFormatter.new(:pattern => "[%l] %d :: %m")
 
         # validate args
         if api_key.nil? or api_key.size != 40
@@ -40,8 +42,14 @@ class OctagonDownloader
         @log.info "Retrieving mix info.."
         info = get_playlist_info( playlist_id )
 
+        @log.debug info
+
+        @log.info "Mix title = #{info['mix']['name']}"
+        @log.info "Mix genres = #{info['mix']['genres'].join(', ')}"
+        @log.info "Mix track count = #{info['mix']['tracks_count']}"
         album_name = sanitize_filename(info['mix']['name'])
         album_genre = info['mix']['genres'][0..3].join(';')
+        album_length = info['mix']['tracks_count']
 
         output_dir = File.join(output_dir, album_name)
         unless Dir.exists? output_dir
@@ -51,19 +59,23 @@ class OctagonDownloader
 
         song_number = 1
         while true
+            @log.info "Track #{song_number}/#{album_length}"
+
             curr_song_url = loader['set']['track']['url']
             curr_song_artist = loader['set']['track']['performer']
             curr_song_title = loader['set']['track']['name']
             curr_track_id = loader['set']['track']['id']
             curr_song_duration = loader['set']['track']['play_duration']
+
             @log.debug loader['set'].inspect
 
             @log.debug "get real url for #{curr_song_url}"
             actual_url = get_song_stream_url( curr_song_url )
             unless actual_url.nil?
-                @log.debug "got #{actual_url}"
 
                 parsed_url = URI(actual_url)
+
+                @log.info "Got #{parsed_url.path}"
 
                 filetype = parsed_url.path[-3..-1]
 
@@ -76,6 +88,8 @@ class OctagonDownloader
                 @log.debug "built file path #{file_path}"
 
                 start_time = Time.now.to_i
+
+                @log.info "Beginning download to #{file_name}"
 
                 http = Net::HTTP.new(parsed_url.host, parsed_url.port)
                 if parsed_url.scheme.downcase == 'https'
@@ -104,7 +118,7 @@ class OctagonDownloader
 
                         temp_file.close
 
-                        @log.debug "adding ID3 tags"
+                        @log.info "Adding ID3 tags"
                         begin
                             Mp3Info.open(temp_file.path) do |mp3|
                                 mp3.tag.title = curr_song_title
@@ -117,9 +131,9 @@ class OctagonDownloader
                             @log.error e
                         end
 
-                        @log.debug "move file to target"
+                        @log.info "Move file to output directory"
                         FileUtils.mv temp_file.path, file_path, :force => true
-                        @log.debug "complete"
+                        @log.info "Complete"
 
                     else
                         @log.error response
@@ -127,11 +141,14 @@ class OctagonDownloader
                 end
 
                 delay = Time.now.to_i - (start_time + 30)
-                sleep(-delay) if delay < 0
-
+                if delay < 0
+                    @log.info "Waiting for 30 second point for play report..."
+                    sleep(-delay)
+                end
+                @log.info "Sending performance report to 8tracks."
                 report_performance(playlist_id, curr_track_id)
 
-                delay = Time.now.to_i - (start_time + curr_song_duration)
+                #delay = Time.now.to_i - (start_time + curr_song_duration)
                 #sleep(-delay) if delay < 0
 
 
@@ -207,7 +224,7 @@ class OctagonDownloader
                     return JSON.load(r.to_str)
                 rescue => e
                     if e.response.code == 403
-                        @log.warn "8tracks throttling! D: (wait 30s)"
+                        @log.warn "8tracks throttling! :( [wait 30s]"
                         sleep(30)
                     else
                         return nil
