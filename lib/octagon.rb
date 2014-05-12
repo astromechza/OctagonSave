@@ -4,11 +4,14 @@ require 'openssl'
 require 'mp3info'
 require 'yaml'
 require 'rest_client'
+require 'log4r'
+include Log4r
 
 class OctagonDownloader
 
     def initialize(api_key)
         @log = Log4r::Logger.new('octagon')
+        @log.outputters = Outputter.stdout
 
         # validate args
         if api_key.nil? or api_key.size != 40
@@ -18,32 +21,32 @@ class OctagonDownloader
         @eightTracks = RestClient::Resource.new('http://8tracks.com')
         @api_key = api_key
         @token = get_play_token()
+        @log.info "Play token acquired: #{@token}"
     end
 
     def save_all(playlist_url, path)
         playlist_url, output_dir = sanitize_save_params( playlist_url, path )
 
-        @log.debug "retrieving playlist id"
+        @log.info "Retrieving mix id for #{playlist_url}.."
         playlist_id = get_playlist_id( playlist_url )
-        @log.debug "playlist id = #{playlist_id}"
 
+        @log.debug "Mix id = #{playlist_id}"
         if playlist_id.nil?
             raise "Invalid 8tracks url"
         end
-        @log.debug "retrieving playlist loader"
+        @log.info "Retrieving mix loader.."
         loader = get_playlist_loader( playlist_id )
 
-        @log.debug "retrieving playlist info"
+        @log.info "Retrieving mix info.."
         info = get_playlist_info( playlist_id )
 
         album_name = sanitize_filename(info['mix']['name'])
         album_genre = info['mix']['genres'][0..3].join(';')
 
         output_dir = File.join(output_dir, album_name)
-
         unless Dir.exists? output_dir
+            @log.info "Building output directory #{output_dir}"
             Dir.mkdir output_dir
-            @log.debug "Created output directory (#{output_dir})"
         end
 
         song_number = 1
@@ -204,7 +207,7 @@ class OctagonDownloader
                     return JSON.load(r.to_str)
                 rescue => e
                     if e.response.code == 403
-                        @log.warning "8tracks throttling! D:"
+                        @log.warn "8tracks throttling! D: (wait 30s)"
                         sleep(30)
                     else
                         return nil
