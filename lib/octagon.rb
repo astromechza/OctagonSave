@@ -5,7 +5,7 @@ require 'mp3info'
 require 'yaml'
 require 'rest_client'
 
-class Downloader
+class OctagonDownloader
 
     def initialize(api_key)
         # validate args
@@ -215,55 +215,4 @@ class Downloader
         def sanitize_filename(fn)
             return fn.gsub(/[^a-z0-9\-_\.\(\) ]+/i, '_')
         end
-end
-
-if __FILE__ == $0
-
-    # setup proxy
-    RestClient.proxy = ENV['http_proxy'] if ENV['http_proxy']
-
-    # has a command been specified
-    if ARGV.size >= 1
-        case ARGV[0]
-        when 'configure'
-            if ARGV.size == 2
-                k = ARGV[1]
-                begin
-                    test = Downloader.new(k)
-                    puts "Configuring OctagonSave with new api key #{k}"
-                    target = File.join(Dir.home, '.octagon_save', 'config.yml')
-                    config = {'api_key' => k}
-                    FileUtils.mkdir_p File.dirname target
-                    File.open(target, 'w') {|f| f.write config.to_yaml}
-                rescue Exception => e
-                    puts "An error occured while testing the new key: #{e.message}"
-                end
-            else
-                puts "usage: downloader.rb configure <8tracks api key>"
-            end
-        when 'get'
-            if ARGV.size == 3
-                url = ARGV[1]
-                output_dir = ARGV[2]
-                api_key = nil
-                begin
-                    target = File.join(Dir.home, '.octagon_save', 'config.yml')
-                    config = YAML::load_file(target)
-                    api_key = config['api_key']
-                rescue Exception => e
-                    puts "An error occured while loading configuration: #{e.message}"
-                end
-
-                Downloader.new(api_key).save_all(url, output_dir)
-
-            else
-                puts "usage: downloader.rb get <8tracks mix url> <output directory>"
-            end
-        else
-            puts "command #{ARGV[0].inspect} is unknown"
-            puts "usage: downloader.rb <configure|get>"
-        end
-    else
-        puts "usage: downloader.rb <configure|get>"
-    end
 end
