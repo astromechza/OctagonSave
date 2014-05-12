@@ -15,5 +15,6 @@ Gem::Specification.new do |s|
 
     s.add_dependency('ruby-mp3info', '~> 0.8.4')
     s.add_dependency('rest_client', '~> 1.7.3')
-    s.add_dependency('rspec', '~= 2.14.1')
+    s.add_dependency('rspec', '~> 2.14.1')
+    s.add_dependency('log4r', '~> 1.1.10')
 end

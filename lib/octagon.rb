@@ -8,6 +8,8 @@ require 'rest_client'
 class OctagonDownloader
 
     def initialize(api_key)
+        @log = Log4r::Logger.new('octagon')
+
         # validate args
         if api_key.nil? or api_key.size != 40
             raise "#{api_key.inspect} is an invalid api_key"
@@ -16,23 +18,22 @@ class OctagonDownloader
         @eightTracks = RestClient::Resource.new('http://8tracks.com')
         @api_key = api_key
         @token = get_play_token()
-        puts "token #{@token}"
     end
 
     def save_all(playlist_url, path)
         playlist_url, output_dir = sanitize_save_params( playlist_url, path )
 
-        puts "retrieving playlist id"
+        @log.debug "retrieving playlist id"
         playlist_id = get_playlist_id( playlist_url )
-        puts "playlist id = #{playlist_id}"
+        @log.debug "playlist id = #{playlist_id}"
 
         if playlist_id.nil?
             raise "Invalid 8tracks url"
         end
-        puts "retrieving playlist loader"
+        @log.debug "retrieving playlist loader"
         loader = get_playlist_loader( playlist_id )
 
-        puts "retrieving playlist info"
+        @log.debug "retrieving playlist info"
         info = get_playlist_info( playlist_id )
 
         album_name = sanitize_filename(info['mix']['name'])
@@ -42,7 +43,7 @@ class OctagonDownloader
 
         unless Dir.exists? output_dir
             Dir.mkdir output_dir
-            puts "Created output directory (#{output_dir})"
+            @log.debug "Created output directory (#{output_dir})"
         end
 
         song_number = 1
@@ -52,12 +53,12 @@ class OctagonDownloader
             curr_song_title = loader['set']['track']['name']
             curr_track_id = loader['set']['track']['id']
             curr_song_duration = loader['set']['track']['play_duration']
-            puts loader['set'].inspect
+            @log.debug loader['set'].inspect
 
-            puts "get real url for #{curr_song_url}"
+            @log.debug "get real url for #{curr_song_url}"
             actual_url = get_song_stream_url( curr_song_url )
             unless actual_url.nil?
-                puts "got #{actual_url}"
+                @log.debug "got #{actual_url}"
 
                 parsed_url = URI(actual_url)
 
@@ -69,7 +70,7 @@ class OctagonDownloader
 
                 file_path = File.join(output_dir, file_name)
 
-                puts "built file path #{file_path}"
+                @log.debug "built file path #{file_path}"
 
                 start_time = Time.now.to_i
 
@@ -93,14 +94,14 @@ class OctagonDownloader
                             size += chunk.size
                             new_progress = (size * 100) / total
                             unless new_progress == progress
-                                puts "\rDownloading %s (%3d%%) " % [file_name, new_progress]
+                                @log.debug "\rDownloading %s (%3d%%) " % [file_name, new_progress]
                             end
                             progress = new_progress
                         end
 
                         temp_file.close
 
-                        puts "adding ID3 tags"
+                        @log.debug "adding ID3 tags"
                         begin
                             Mp3Info.open(temp_file.path) do |mp3|
                                 mp3.tag.title = curr_song_title
@@ -110,15 +111,15 @@ class OctagonDownloader
                                 mp3.tag.genre_s = album_genre
                             end
                         rescue Exception => e
-                            puts e
+                            @log.error e
                         end
 
-                        puts "move file to target"
+                        @log.debug "move file to target"
                         FileUtils.mv temp_file.path, file_path, :force => true
-                        puts "complete"
+                        @log.debug "complete"
 
                     else
-                        puts response
+                        @log.error response
                     end
                 end
 
@@ -199,11 +200,11 @@ class OctagonDownloader
             while true
                 begin
                     r = @eightTracks[resource].get
-                    puts r.to_str
+                    @log.debug r.to_str
                     return JSON.load(r.to_str)
                 rescue => e
                     if e.response.code == 403
-                        puts "8tracks throttling! D:"
+                        @log.warning "8tracks throttling! D:"
                         sleep(30)
                     else
                         return nil
