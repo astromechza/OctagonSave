@@ -51,6 +51,7 @@ class Downloader
             curr_song_artist = loader['set']['track']['performer']
             curr_song_title = loader['set']['track']['name']
             curr_track_id = loader['set']['track']['id']
+            curr_song_duration = loader['set']['track']['play_duration']
             puts loader['set'].inspect
 
             puts "get real url for #{curr_song_url}"
@@ -70,14 +71,13 @@ class Downloader
 
                 puts "built file path #{file_path}"
 
+                start_time = Time.now.to_i
 
                 http = Net::HTTP.new(parsed_url.host, parsed_url.port)
                 if parsed_url.scheme.downcase == 'https'
                     http.use_ssl = true
                     http.verify_mode = OpenSSL::SSL::VERIFY_NONE
                 end
-
-                start_time = Time.now.to_i
 
                 http.request_get(parsed_url.path + '?' + parsed_url.query) do |response|
                     if response.is_a? Net::HTTPOK
@@ -127,6 +127,8 @@ class Downloader
 
                 report_performance(playlist_id, curr_track_id)
 
+                delay = Time.now.to_i - (start_time + curr_song_duration)
+                #sleep(-delay) if delay < 0
 
 
 
