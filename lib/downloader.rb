@@ -1,9 +1,9 @@
-require 'net/http'
 require 'json'
 require 'tempfile'
 require 'openssl'
 require 'mp3info'
 require 'yaml'
+require 'rest_client'
 
 class Downloader
 
@@ -13,20 +13,26 @@ class Downloader
             raise "#{api_key.inspect} is an invalid api_key"
         end
 
+        @eightTracks = RestClient::Resource.new('http://8tracks.com')
         @api_key = api_key
         @token = get_play_token()
+        puts "token #{@token}"
     end
 
     def save_all(playlist_url, path)
         playlist_url, output_dir = sanitize_save_params( playlist_url, path )
 
+        puts "retrieving playlist id"
         playlist_id = get_playlist_id( playlist_url )
+        puts "playlist id = #{playlist_id}"
 
         if playlist_id.nil?
             raise "Invalid 8tracks url"
         end
-
+        puts "retrieving playlist loader"
         loader = get_playlist_loader( playlist_id )
+
+        puts "retrieving playlist info"
         info = get_playlist_info( playlist_id )
 
         album_name = sanitize_filename(info['mix']['name'])
@@ -48,11 +54,9 @@ class Downloader
             puts loader['set'].inspect
 
             puts "get real url for #{curr_song_url}"
-            uri = URI(curr_song_url)
-            resp = Net::HTTP.get_response(uri)
-            if [200, 302].include? resp.code.to_i
-                actual_url = resp['location']
-                puts "got #{resp.code} #{actual_url}"
+            actual_url = get_song_stream_url( curr_song_url )
+            unless actual_url.nil?
+                puts "got #{actual_url}"
 
                 parsed_url = URI(actual_url)
 
@@ -153,45 +157,53 @@ class Downloader
         end
 
         def get_play_token
-            r = Net::HTTP.get('8tracks.com', "/sets/new.json?api_key=#{@api_key}")
+            r = @eightTracks["sets/new.json?api_key=#{@api_key}"].get().to_str
             raise r if r == 'You must use a valid API key.'
             jsn = JSON.load(r)
             return jsn['play_token']
         end
 
-        def get_playlist_id(url)
-            content = Net::HTTP.get(URI(url))
-            return content[/mixes\/(\d+)\/player/, 1]
+        def get_playlist_id(playlist_url)
+            content = RestClient.get playlist_url
+            return content.to_str[/mixes\/(\d+)\/player/, 1]
         end
 
         def get_playlist_loader(playlist_id)
-            playurl = URI("http://8tracks.com/sets/#{@token}/play.json?mix_id=#{playlist_id}&api_key=#{@api_key}")
-            return JSON.load(Net::HTTP.get(playurl))
+            r = @eightTracks["sets/#{@token}/play.json?mix_id=#{playlist_id}&api_key=#{@api_key}"].get
+            return JSON.load(r.to_str)
         end
 
         def get_playlist_info(playlist_id)
-            playlist = URI("http://8tracks.com/mixes/#{playlist_id}.json?api_key=#{@api_key}")
-            return JSON.load(Net::HTTP.get(playlist))
+            r = @eightTracks["mixes/#{playlist_id}.json?api_key=#{@api_key}"].get
+            return JSON.load(r.to_str)
+        end
+
+        def get_song_stream_url(url)
+            RestClient.get url do |response, request, result, &block|
+                if [301, 302, 307].include? response.code
+                    return response.headers[:location]
+                end
+            end
+            return nil
         end
 
         def report_performance(playlist_id, track_id)
-            return Net::HTTP.get(URI("http://8tracks.com/sets/#{@token}/report.json?track_id=#{track_id}&mix_id=#{playlist_id}"))
+            @eightTracks["sets/#{@token}/report.xml?track_id=#{track_id}&mix_id=#{playlist_id}&api_key=#{@api_key}"].get
         end
 
         def iterate_loader(playlist_id)
-            playurl = URI("http://8tracks.com/sets/#{@token}/next.json?mix_id=#{playlist_id}&api_key=#{@api_key}")
+            resource = "sets/#{@token}/next.json?mix_id=#{playlist_id}&api_key=#{@api_key}"
+            r = @eightTracks[resource].get
 
-            res = Net::HTTP.get_response(playurl)
-
-            while res.code == '403'
+            while r.code == '403'
                 puts "8tracks throttling! D:"
                 sleep(30)
-                res = Net::HTTP.get_response(playurl)
+                r = @eightTracks[resource].get
             end
 
-            puts res.body
+            puts r.to_str
 
-            return JSON.load(res.body)
+            return JSON.load(r.to_str)
         end
 
         def sanitize_filename(fn)
@@ -200,6 +212,10 @@ class Downloader
 end
 
 if __FILE__ == $0
+
+    # setup proxy
+    RestClient.proxy = ENV['http_proxy'] if ENV['http_proxy']
+
     # has a command been specified
     if ARGV.size >= 1
         case ARGV[0]
