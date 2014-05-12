@@ -12,4 +12,8 @@ Gem::Specification.new do |s|
     s.require_paths = ["lib"]
     s.required_ruby_version     = '>= 2.1.0'
     s.homepage = 'http://github.com/AstromechZA/OctagonSave'
+
+    s.add_dependency('ruby-mp3info', '~> 0.8.4')
+    s.add_dependency('rest_client', '~> 1.7.3')
+    s.add_dependency('rspec', '~= 2.14.1')
 end
