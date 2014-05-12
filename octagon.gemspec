@@ -11,4 +11,5 @@ Gem::Specification.new do |s|
     s.executables = %w(octagon)
     s.require_paths = ["lib"]
     s.required_ruby_version     = '>= 2.1.0'
+    s.homepage = 'http://github.com/AstromechZA/OctagonSave'
 end

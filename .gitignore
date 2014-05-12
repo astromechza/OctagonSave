@@ -1,2 +1,5 @@
 test.rb
 *.mp3
+*.gem
+Gemfile.lock
+.ruby-version
