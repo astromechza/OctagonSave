@@ -202,8 +202,6 @@ class OctagonDownloader
 
         def get_playlist_id(playlist_url)
             content = RestClient.get playlist_url
-            @log.info content.code
-            @log.info content
             return content.to_str[/mixes\/(\d+)[\/\<]/, 1]
         end
 
