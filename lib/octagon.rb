@@ -47,7 +47,7 @@ class OctagonDownloader
         @log.info "Mix title = #{info['mix']['name']}"
         @log.info "Mix genres = #{info['mix']['genres'].join(', ')}"
         @log.info "Mix track count = #{info['mix']['tracks_count']}"
-        album_name = sanitize_filename(info['mix']['name'])
+        album_name = sanitize_dirname(info['mix']['name'])
         album_genre = info['mix']['genres'][0..3].join(';')
         album_length = info['mix']['tracks_count']
 
@@ -235,5 +235,9 @@ class OctagonDownloader
 
         def sanitize_filename(fn)
             return fn.gsub(/[^a-z0-9\-_\.\(\) ]+/i, '_')
+        end
+
+        def sanitize_dirname(fn)
+            return fn.gsub(/[^a-z0-9\-_\(\)\[\] ]+/i, '_')
         end
 end
