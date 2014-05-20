@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'log4r'
 require 'octagon'
 
 # setup proxy
@@ -25,7 +26,7 @@ if ARGV.size >= 1
             puts "usage: downloader.rb configure <8tracks api key>"
         end
     when 'get'
-        if ARGV.size == 3
+        if ARGV.size >= 3
             url = ARGV[1]
             output_dir = ARGV[2]
             api_key = nil
@@ -37,7 +38,9 @@ if ARGV.size >= 1
                 puts "An error occured while loading configuration: #{e.message}"
             end
 
-            OctagonDownloader.new(api_key).save_all(url, output_dir)
+            od = OctagonDownloader.new(api_key)
+            od.debug_mode() if ARGV.include? '--debug'
+            od.save_all(url, output_dir)
 
         else
             puts "usage: downloader.rb get <8tracks mix url> <output directory>"

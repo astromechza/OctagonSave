@@ -26,13 +26,17 @@ class OctagonDownloader
         @log.info "Play token acquired: #{@token}"
     end
 
+    def debug_mode
+        @log.level = DEBUG
+    end
+
     def save_all(playlist_url, path)
         playlist_url, output_dir = sanitize_save_params( playlist_url, path )
 
         @log.info "Retrieving mix id for #{playlist_url}.."
         playlist_id = get_playlist_id( playlist_url )
 
-        @log.debug "Mix id = #{playlist_id}"
+        @log.debug "Mix id = '#{playlist_id}'"
         if playlist_id.nil?
             raise "Invalid 8tracks url"
         end
@@ -54,7 +58,7 @@ class OctagonDownloader
         output_dir = File.join(output_dir, album_name)
         unless Dir.exists? output_dir
             @log.info "Building output directory #{output_dir}"
-            FileUtils.mkdir_p File.dirname output_dir
+            FileUtils.mkdir_p output_dir
         end
 
         song_number = 1
@@ -69,13 +73,16 @@ class OctagonDownloader
 
             @log.debug loader['set'].inspect
 
-            @log.debug "get real url for #{curr_song_url}"
-            actual_url = get_song_stream_url( curr_song_url )
-            unless actual_url.nil?
+            if curr_song_url.include? 'api.8tracks.com'
+                @log.debug "get real url for #{curr_song_url}"
+                curr_song_url = get_song_stream_url( curr_song_url )
+            end
 
-                parsed_url = URI(actual_url)
+            unless curr_song_url.nil?
 
-                @log.info "Got #{parsed_url.path}"
+                @log.info "Got #{curr_song_url}"
+
+                parsed_url = URI(curr_song_url)
 
                 filetype = parsed_url.path[-3..-1]
 
@@ -97,7 +104,12 @@ class OctagonDownloader
                     http.verify_mode = OpenSSL::SSL::VERIFY_NONE
                 end
 
-                http.request_get(parsed_url.path + '?' + parsed_url.query) do |response|
+                reconstructed = parsed_url.path
+                unless parsed_url.query.nil?
+                    reconstructed += '?' + parsed_url.query
+                end
+
+                http.request_get(reconstructed) do |response|
                     if response.is_a? Net::HTTPOK
                         temp_file = Tempfile.new(file_name)
                         temp_file.binmode
@@ -118,21 +130,23 @@ class OctagonDownloader
 
                         temp_file.close
 
-                        @log.info "Adding ID3 tags"
-                        begin
-                            Mp3Info.open(temp_file.path) do |mp3|
-                                mp3.tag.title = curr_song_title
-                                mp3.tag.artist = curr_song_artist
-                                mp3.tag.album = info['mix']['name']
-                                mp3.tag.tracknum = song_number
-                                mp3.tag.genre_s = album_genre
+                        if filetype == 'mp3'
+                            @log.info "Adding ID3 tags"
+                            begin
+                                Mp3Info.open(temp_file.path) do |mp3|
+                                    mp3.tag.title = curr_song_title.force_encoding("utf-8")
+                                    mp3.tag.artist = curr_song_artist.force_encoding("utf-8")
+                                    mp3.tag.album = info['mix']['name'].force_encoding("utf-8")
+                                    mp3.tag.tracknum = song_number
+                                    mp3.tag.genre_s = album_genre.force_encoding("utf-8")
+                                end
+                            rescue Exception => e
+                                @log.error e
                             end
-                        rescue Exception => e
-                            @log.error e
                         end
 
-                        @log.info "Move file to output directory"
-                        FileUtils.mv temp_file.path, file_path, :force => true
+                        @log.info "Move file to output file #{file_path}"
+                        FileUtils.mv temp_file.path, file_path
                         @log.info "Complete"
 
                     else
@@ -188,7 +202,9 @@ class OctagonDownloader
 
         def get_playlist_id(playlist_url)
             content = RestClient.get playlist_url
-            return content.to_str[/mixes\/(\d+)\/player/, 1]
+            @log.info content.code
+            @log.info content
+            return content.to_str[/mixes\/(\d+)[\/\<]/, 1]
         end
 
         def get_playlist_loader(playlist_id)
@@ -205,6 +221,9 @@ class OctagonDownloader
             RestClient.get url do |response, request, result, &block|
                 if [301, 302, 307].include? response.code
                     return response.headers[:location]
+                end
+                if response.code == 200
+                    return url
                 end
             end
             return nil
