@@ -78,96 +78,95 @@ class OctagonDownloader
                 curr_song_url = get_song_stream_url( curr_song_url )
             end
 
-            unless curr_song_url.nil?
+            @log.info "Got #{curr_song_url}"
 
-                @log.info "Got #{curr_song_url}"
+            parsed_url = URI(curr_song_url)
 
-                parsed_url = URI(curr_song_url)
+            filetype = parsed_url.path[-3..-1]
 
-                filetype = parsed_url.path[-3..-1]
-
-                file_name = "#{song_number} - #{curr_song_artist} - #{curr_song_title}.#{filetype}"
-
-                file_name = sanitize_filename(file_name)
-
-                file_path = File.join(output_dir, file_name)
-
-                @log.debug "built file path #{file_path}"
-
-                start_time = Time.now.to_i
-
-                @log.info "Beginning download to #{file_name}"
-
-                http = Net::HTTP.new(parsed_url.host, parsed_url.port)
-                if parsed_url.scheme.downcase == 'https'
-                    http.use_ssl = true
-                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-                end
-
-                reconstructed = parsed_url.path
-                unless parsed_url.query.nil?
-                    reconstructed += '?' + parsed_url.query
-                end
-
-                http.request_get(reconstructed) do |response|
-                    if response.is_a? Net::HTTPOK
-                        temp_file = Tempfile.new(file_name)
-                        temp_file.binmode
-
-                        size = 0
-                        progress = 0
-                        total = response.header["Content-Length"].to_i
-
-                        response.read_body do |chunk|
-                            temp_file << chunk
-                            size += chunk.size
-                            new_progress = (size * 100) / total
-                            unless new_progress == progress
-                                @log.debug "\rDownloading %s (%3d%%) " % [file_name, new_progress]
-                            end
-                            progress = new_progress
-                        end
-
-                        temp_file.close
-
-                        if filetype == 'mp3'
-                            @log.info "Adding ID3 tags"
-                            begin
-                                Mp3Info.open(temp_file.path) do |mp3|
-                                    mp3.tag.title = curr_song_title.force_encoding("utf-8")
-                                    mp3.tag.artist = curr_song_artist.force_encoding("utf-8")
-                                    mp3.tag.album = info['mix']['name'].force_encoding("utf-8")
-                                    mp3.tag.tracknum = song_number
-                                    mp3.tag.genre_s = album_genre.force_encoding("utf-8")
-                                end
-                            rescue Exception => e
-                                @log.error e
-                            end
-                        end
-
-                        @log.info "Move file to output file #{file_path}"
-                        FileUtils.mv temp_file.path, file_path
-                        @log.info "Complete"
-
-                    else
-                        @log.error response
-                    end
-                end
-
-                delay = Time.now.to_i - (start_time + 30)
-                if delay < 0
-                    @log.info "Waiting for 30 second point for play report..."
-                    sleep(-delay)
-                end
-                @log.info "Sending performance report to 8tracks."
-                report_performance(playlist_id, curr_track_id)
-
-                #delay = Time.now.to_i - (start_time + curr_song_duration)
-                #sleep(-delay) if delay < 0
-
-
-
+            if curr_song_url.include? 'api.soundcloud.com'
+                filetype = 'mp3'
             end
+
+            file_name = "#{song_number} - #{curr_song_artist} - #{curr_song_title}.#{filetype}"
+
+            file_name = sanitize_filename(file_name)
+
+            file_path = File.join(output_dir, file_name)
+
+            @log.debug "built file path #{file_path}"
+
+            start_time = Time.now.to_i
+
+            @log.info "Beginning download to #{file_name}"
+
+            http = Net::HTTP.new(parsed_url.host, parsed_url.port)
+            if parsed_url.scheme.downcase == 'https'
+                http.use_ssl = true
+                http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+            end
+
+            reconstructed = parsed_url.path
+            unless parsed_url.query.nil?
+                reconstructed += '?' + parsed_url.query
+            end
+
+            http.request_get(reconstructed) do |response|
+                if response.is_a? Net::HTTPOK
+                    temp_file = Tempfile.new(file_name)
+                    temp_file.binmode
+
+                    size = 0
+                    progress = 0
+                    total = response.header["Content-Length"].to_i
+
+                    response.read_body do |chunk|
+                        temp_file << chunk
+                        size += chunk.size
+                        new_progress = (size * 100) / total
+                        unless new_progress == progress
+                            @log.debug "\rDownloading %s (%3d%%) " % [file_name, new_progress]
+                        end
+                        progress = new_progress
+                    end
+
+                    temp_file.close
+
+                    if filetype == 'mp3'
+                        @log.info "Adding ID3 tags"
+                        begin
+                            Mp3Info.open(temp_file.path) do |mp3|
+                                mp3.tag.title = curr_song_title.force_encoding("utf-8")
+                                mp3.tag.artist = curr_song_artist.force_encoding("utf-8")
+                                mp3.tag.album = info['mix']['name'].force_encoding("utf-8")
+                                mp3.tag.tracknum = song_number
+                                mp3.tag.genre_s = album_genre.force_encoding("utf-8")
+                            end
+                        rescue Exception => e
+                            @log.error e
+                        end
+                    end
+
+                    @log.info "Move file to output file #{file_path}"
+                    FileUtils.mv temp_file.path, file_path
+                    @log.info "Complete"
+
+                else
+                    @log.error response
+                end
+            end
+
+            delay = Time.now.to_i - (start_time + 30)
+            if delay < 0
+                @log.info "Waiting for 30 second point for play report..."
+                sleep(-delay)
+            end
+            @log.info "Sending performance report to 8tracks."
+            report_performance(playlist_id, curr_track_id)
+
+            #delay = Time.now.to_i - (start_time + curr_song_duration)
+            #sleep(-delay) if delay < 0
+
 
             song_number += 1
 
