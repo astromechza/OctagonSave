@@ -22,11 +22,11 @@ class OctagonDownloader
         end
 
         EightTracksEndpoint.set_api_key api_key
-        @log.info "Set Api Key."
+        @log.info "Set Api Key"
     end
 
     def save_all mix_url, output_dir
-        @log.info "Download '#{mix_url}' -> '#{output_dir}.'"
+        @log.info "Download '#{mix_url}' -> '#{output_dir}'"
         m = Mix.new mix_url
 
         output_dir = File.join(File.expand_path(output_dir), sanitize_dirname(m.name))
@@ -40,7 +40,7 @@ class OctagonDownloader
             begin
                 t = m.next
 
-                @log.info "Downloading '#{t.title} - #{t.artist}'"
+                @log.info "Downloading '#{sanitize_filename(t.filename)}'"
 
                 start_time = Time.now.to_i
 
@@ -53,12 +53,12 @@ class OctagonDownloader
                     tag(f, t)
                 end
 
-                @log.debug "Copy to output folder."
+                @log.debug "Copy to output folder"
                 FileUtils.mv f, File.join(output_dir, sanitize_filename(t.filename))
 
                 delay = start_time + 30 - Time.now.to_i
                 if delay > 0
-                    @log.debug "Sleep #{delay}s before reporting."
+                    @log.debug "Sleep #{delay}s before reporting"
                     sleep(delay)
                 end
 
@@ -66,7 +66,7 @@ class OctagonDownloader
                 EightTracksEndpoint.report_performance(m.id, t.id)
 
             rescue RestClient::Forbidden
-                @log.warn "HTTP403 received. Waiting 30s to retry."
+                @log.warn "HTTP403 received. Waiting 30s to retry"
                 sleep(30)
             rescue MissingTrackError => e
                 @log.error e.class.name
