@@ -3,7 +3,18 @@ require_relative 'exceptions'
 
 class Track
 
-    def initialize(params)
+    attr_reader :id
+    attr_reader :stream
+    attr_reader :title
+    attr_reader :artist
+    attr_reader :album
+    attr_reader :year
+    attr_reader :genres
+    attr_reader :number
+    attr_reader :filetype
+    attr_reader :filename
+
+    def initialize params
         @id = params['id']
         @stream = params['track_file_stream_url']
         @title = params['name']
@@ -17,22 +28,6 @@ class Track
 
         @filetype = URI(@stream).path[-3..-1]
         @filename = create_filename
-    end
-
-    def id
-        @id
-    end
-
-    def filename
-        @filename
-    end
-
-    def filetype
-        @filetype
-    end
-
-    def stream
-        @stream
     end
 
     private

@@ -4,7 +4,10 @@ require_relative 'track'
 
 class Mix
 
-    def initialize(mix_url)
+    attr_reader :id
+    attr_reader :info
+
+    def initialize mix_url
         # basic check for 8tracks url
         if mix_url.nil? or not mix_url.include? '8tracks.com'
             raise "'#{mix_url}' is not a valid 8tracks mix url."
@@ -19,12 +22,8 @@ class Mix
         @current_track_num = 0
     end
 
-    def id
-        @id
-    end
-
-    def info
-        @info
+    def name
+        @info['mix']['name']
     end
 
     def has_next?
