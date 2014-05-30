@@ -3,3 +3,4 @@ test.rb
 *.gem
 Gemfile.lock
 .ruby-version
+*.json
