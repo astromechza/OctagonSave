@@ -25,6 +25,10 @@ class OctagonDownloader
         @log.info "Set Api Key"
     end
 
+    def debug_mode
+        @log.level = DEBUG
+    end
+
     def save_all mix_url, output_dir
         @log.info "Download '#{mix_url}' -> '#{output_dir}'"
         m = Mix.new mix_url

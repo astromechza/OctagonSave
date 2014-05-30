@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-
+require 'yaml'
 require 'octagon'
 
 # setup proxy
@@ -33,13 +33,14 @@ if ARGV.size >= 1
                 target = File.join(Dir.home, '.octagon', 'config.yml')
                 config = YAML::load_file(target)
                 api_key = config['api_key']
+
+                od = OctagonDownloader.new(api_key)
+                od.debug_mode() if ARGV.include? '--debug'
+                od.save_all(url, output_dir)
+
             rescue Exception => e
                 puts "An error occured while loading configuration: #{e.message}"
             end
-
-            od = OctagonDownloader.new(api_key)
-            od.debug_mode() if ARGV.include? '--debug'
-            od.save_all(url, output_dir)
 
         else
             puts "usage: octagon get <8tracks mix url> <output directory> [--debug]"
