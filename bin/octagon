@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'log4r'
 require 'octagon'
 
 # setup proxy
@@ -23,7 +22,7 @@ if ARGV.size >= 1
                 puts "An error occured while testing the new key: #{e.message}"
             end
         else
-            puts "usage: downloader.rb configure <8tracks api key>"
+            puts "usage: octagon configure <8tracks api key>"
         end
     when 'get'
         if ARGV.size >= 3
@@ -43,12 +42,12 @@ if ARGV.size >= 1
             od.save_all(url, output_dir)
 
         else
-            puts "usage: downloader.rb get <8tracks mix url> <output directory>"
+            puts "usage: octagon get <8tracks mix url> <output directory> [--debug]"
         end
     else
         puts "command #{ARGV[0].inspect} is unknown"
-        puts "usage: downloader.rb <configure|get>"
+        puts "usage: octagon <configure|get>"
     end
 else
-    puts "usage: downloader.rb <configure|get>"
+    puts "usage: octagon <configure|get>"
 end

@@ -17,7 +17,6 @@ class EightTracksEndpoint
 
     # internal method used to access an api resource
     def self.get_json_v3 path
-        puts "get #{path}"
         path += (path.include? '?') ? '&' : '?'
         path += "api_key=#{@@api_key}&api_version=3"
         JSON.load(@@endpoint[path].get.to_s)
