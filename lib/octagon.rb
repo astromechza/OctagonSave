@@ -40,6 +40,9 @@ class OctagonDownloader
             FileUtils.mkdir_p output_dir
         end
 
+        # cover art
+        get_cover_art m, File.join(output_dir, 'folder.jpg')
+
         while m.has_next?
             begin
                 t = m.next
@@ -127,6 +130,10 @@ class OctagonDownloader
             rescue Exception => e
                 @log.error e.class.name
             end
+        end
+
+        def get_cover_art mix, file_name
+
         end
 
         def sanitize_filename input
