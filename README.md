@@ -3,6 +3,8 @@ A Ruby gem for downloading playlists from 8tracks. Octagon aims to use the 8trac
 
 Build for Ruby 2.1.0
 
+Just to be clear, this is for experimental purposes only. Licensed under the MIT license, and I am not liable for anything that happens if you use this.
+
 ### Installation
 Unfortunately I'm not putting this on rubygems.org. So for now you need to clone, build, and install.
 
@@ -17,7 +19,7 @@ Unfortunately I'm not putting this on rubygems.org. So for now you need to clone
 
     # create downloader using some valid 40 character api key
     o = OctagonDownloader.new( '1234567890abcdef1234567890abcdef12345678' )
-    
+
     # download a playlist to a directory
     o.save_all( 'http://8tracks.com/someuser/somemix', '~/Music' )
 
