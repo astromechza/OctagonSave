@@ -133,7 +133,15 @@ class OctagonDownloader
         end
 
         def get_cover_art mix, file_name
-
+            begin
+                # select largest square cover smaller than 1000x1000. (usually sq500)
+                dim = mix.info['cover_urls'].keys.select {|u| u =~ /sq\d\d\d/ }.last
+                r = RestClient.get mix.info['cover_urls'][dim]
+                File.open(file_name, 'w') {|f| f << r}
+                @log.info "Saved Cover art"
+            rescue Exception => e
+                @log.error "Could not download cover art [#{e.class.name}]"
+            end
         end
 
         def sanitize_filename input
