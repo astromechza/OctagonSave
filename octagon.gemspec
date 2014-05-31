@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
     s.name        = 'octagon'
-    s.version     = '1.0.2'
+    s.version     = '1.1.0'
     s.date        = '2014-05-31'
     s.summary     = "8tracks downloader."
     s.description = "A quick command line tool for downloading a mix from 8tracks."
