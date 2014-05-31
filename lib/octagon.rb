@@ -31,9 +31,9 @@ class OctagonDownloader
 
     def save_all mix_url, output_dir
         @log.info "Download '#{mix_url}' -> '#{output_dir}'"
-        m = Mix.new mix_url
+        mix = Mix.new mix_url
 
-        output_dir = File.join(File.expand_path(output_dir), sanitize_dirname(m.name))
+        output_dir = File.join(File.expand_path(output_dir), sanitize_dirname(mix.name))
         @log.debug "Directory #{output_dir}"
 
         unless Dir.exists? output_dir
@@ -41,27 +41,27 @@ class OctagonDownloader
         end
 
         # cover art
-        get_cover_art m, File.join(output_dir, 'folder.jpg')
+        get_cover_art mix, File.join(output_dir, 'folder.jpg')
 
-        while m.has_next?
+        while mix.has_next?
             begin
-                t = m.next
+                track = mix.next
 
-                @log.info "Downloading '#{sanitize_filename(t.filename)}'"
+                @log.info "Downloading '#{sanitize_filename(track.filename)}'"
 
                 start_time = Time.now.to_i
 
                 # download track
-                f = download t
+                f = download track
 
                 # tag track
-                if t.filetype == 'mp3'
+                if track.filetype == 'mp3'
                     @log.info "Tagging MP3"
-                    tag(f, t)
+                    tag(f, track)
                 end
 
                 @log.debug "Copy to output folder"
-                FileUtils.mv f, File.join(output_dir, sanitize_filename(t.filename))
+                FileUtils.mv f, File.join(output_dir, sanitize_filename(track.filename))
 
                 delay = start_time + 30 - Time.now.to_i
                 if delay > 0
@@ -70,7 +70,7 @@ class OctagonDownloader
                 end
 
                 @log.info "Reporting Performance"
-                EightTracksEndpoint.report_performance(m.id, t.id)
+                EightTracksEndpoint.report_performance(mix.id, track.id)
 
             rescue RestClient::Forbidden
                 @log.warn "HTTP403 received. Waiting 30s to retry"
