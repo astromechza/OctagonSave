@@ -43,6 +43,7 @@ class Mix
         @current_track_num += 1
         @current_loader['set']['track']['number'] = @current_track_num
         @current_loader['set']['track']['genres'] = @info['mix']['genres']
+        @current_loader['set']['track']['album'] = @info['mix']['name']
 
         return Track.new @current_loader['set']['track']
     end
