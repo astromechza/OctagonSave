@@ -23,14 +23,14 @@ class Mix
     end
 
     def name
-        @info['mix']['name']
+        @info['name']
     end
 
     def has_next?
         if @current_loader.nil?
             return true
         end
-        return (not (@current_loader['set']['at_last_track'] || @current_loader['set']['at_end']))
+        return (not (@current_loader['at_last_track'] || @current_loader['at_end']))
     end
 
     def next
@@ -41,11 +41,11 @@ class Mix
         end
 
         @current_track_num += 1
-        @current_loader['set']['track']['number'] = @current_track_num
-        @current_loader['set']['track']['genres'] = @info['mix']['genres']
-        @current_loader['set']['track']['release_name'] = @info['mix']['name']
+        @current_loader['track']['number'] = @current_track_num
+        @current_loader['track']['genres'] = @info['genres']
+        @current_loader['track']['release_name'] = @info['name']
 
-        return Track.new @current_loader['set']['track']
+        return Track.new @current_loader['track']
     end
 
 end

@@ -29,7 +29,7 @@ class EightTracksEndpoint
 
     # get the details for the given mix
     def self.get_mix mix_id
-        return get_json_v3("mixes/#{mix_id}.json")
+        return get_json_v3("mixes/#{mix_id}.json")['mix']
     end
 
     # get a new play token for the EightTracksEndpoint
@@ -40,19 +40,19 @@ class EightTracksEndpoint
     # select mix for playback
     def self.get_start_track mix_id
         refresh_play_token if @@token.nil?
-        return get_json_v3("sets/#{@@token}/play.json?mix_id=#{mix_id}")
+        return get_json_v3("sets/#{@@token}/play.json?mix_id=#{mix_id}")['set']
     end
 
     # next track
     def self.get_next_track mix_id
         refresh_play_token if @@token.nil?
-        return get_json_v3("sets/#{@@token}/next.json?mix_id=#{mix_id}")
+        return get_json_v3("sets/#{@@token}/next.json?mix_id=#{mix_id}")['set']
     end
 
     # skip track
     def self.get_skip_track mix_id
         refresh_play_token if @@token.nil?
-        return get_json_v3("sets/#{@@token}/skip.json?mix_id=#{mix_id}")
+        return get_json_v3("sets/#{@@token}/skip.json?mix_id=#{mix_id}")['set']
     end
 
     # report the performance of a track, so that peeps get paid yo!
