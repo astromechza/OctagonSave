@@ -43,6 +43,9 @@ class OctagonDownloader
         # cover art
         get_cover_art mix, File.join(output_dir, 'folder.jpg')
 
+        # store filenames for playlist
+        playlist_files = []
+
         while mix.has_next?
             begin
                 track = mix.next
@@ -61,7 +64,11 @@ class OctagonDownloader
                 end
 
                 @log.debug "Copy to output folder"
-                FileUtils.mv f, File.join(output_dir, sanitize_filename(track.filename))
+                filename = sanitize_filename track.filename
+                FileUtils.mv f, File.join(output_dir, filename)
+
+                # add filename to playlist
+                playlist_files << filename
 
                 delay = start_time + 30 - Time.now.to_i
                 if delay > 0
@@ -79,6 +86,11 @@ class OctagonDownloader
                 @log.error e.class.name
             end
         end
+
+        # save playlist file
+        playlist_file = File.join(output_dir, sanitize_filename(mix.name) + '.m3u')
+        @log.info "Saving playlist file to #{playlist_file}"
+        File.open(playlist_file, 'w') { |f| f.puts playlist_files }
     end
 
     private
